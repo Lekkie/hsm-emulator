@@ -84,7 +84,7 @@ object HsmMessageEncoding {
     }
 
     def readNumeric(len: Int) = readString(len).toInt
-    
+
     def readHexNumeric(len: Int) = Integer.parseInt(readString(len), 16)
 
     def readHex(len: Int) = HexConverter.fromHex(readString(len))
@@ -144,7 +144,8 @@ object HsmMessageEncoding {
         val atalla = if (delOrAtalla != ';') readNumeric(1) == 1 else false
         val delimiter = if ((delOrAtalla == ';' || atalla) && iter.hasNext) iter.getByte == ';' else false
         val (mode, keyType, scheme) = if (delimiter) (iter.getByte, iter.getByte, iter.getByte) else ('0'.toByte, '0'.toByte, '0'.toByte)
-        GenerateDekRequest(msgHeader, atalla, mode, keyType, scheme)
+        val zmkDesKey = readKey.toArray
+        GenerateDekRequest(msgHeader, atalla, mode, keyType, scheme, zmkDesKey)
       case "GI" =>
         val encryptionIdentifier = readString(2)
         val padModeIdentifier = readString(2)
@@ -242,12 +243,12 @@ object HsmMessageEncoding {
     def writeInt(v: Int) = bs ++= ByteString(f"$v%02d")
 
     def padString(s: String, len: Int, pad: Char) = s ++ Array.fill(len - s.length)(pad)
-    
+
     //bs ++= ByteString(messageHeader)
     bs ++= ByteString(msg.messageHeader)
     bs ++= ByteString(msg.responseCode)
     bs ++= ByteString(msg.errorCode)
-    
+
     msg match {
       case i: ImportDesKeyResponse =>
         writeKey(ByteString(i.desKey))
@@ -284,6 +285,8 @@ object HsmMessageEncoding {
       case generateDek: GenerateDekResponse =>
         bs += 'U'
         writeHex(ByteString(generateDek.dekLmk))
+        bs += 'U'
+        writeHex(ByteString(generateDek.dekZmk))
         writeHex(ByteString(generateDek.checkValue))
         bs ++= ByteString("0000000000")
       case generateOffset: GenerateIBMPinOffsetResponse =>

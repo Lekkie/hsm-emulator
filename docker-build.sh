@@ -1,6 +1,6 @@
 rm -f ./docker/hsmsim-akka*.jar
 mvn install
-cp ./hsmsim-akka/target/hsmsim-akka-0.0.1-SNAPSHOT.jar ./docker/
+cp ./hsmsim-akka/target/hsmsim-akka-0.0.1-SNAPSHOT-jar-with-dependencies.jar ./docker/
 docker rm $(docker ps -a -q)
 docker rmi -f hsm-emulator
 
