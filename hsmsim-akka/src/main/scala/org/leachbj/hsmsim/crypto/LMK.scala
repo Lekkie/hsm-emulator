@@ -25,16 +25,18 @@ import org.leachbj.hsmsim.util.HexConverter
 
 object LMK {
   val lmk02_03 = HexConverter.fromHex("20202020202020203131313131313131").toArray
-  val lmk04_05 = HexConverter.fromHex("40404040404040405151515151515151").toArray
-  val lmk06_07 = HexConverter.fromHex("61616161616161617070707070707070").toArray
-  val lmk14_15 = HexConverter.fromHex("E0E0010101010101F1F1010101010101").toArray
-  val lmk16_17 = HexConverter.fromHex("1C587F1C13924FEF0101010101010101").toArray
-  val lmk26_27 = HexConverter.fromHex("16161616161616161919191919191919").toArray
+  val lmk04_05 = HexConverter.fromHex("40404040404040405151515151515151").toArray //ZMK
+  val lmk06_07 = HexConverter.fromHex("61616161616161617070707070707070").toArray //ZPK
+  val lmk14_15 = HexConverter.fromHex("E0E0010101010101F1F1010101010101").toArray //PVK TPK TMK
+  val lmk16_17 = HexConverter.fromHex("1C587F1C13924FEF0101010101010101").toArray //TAK
+  val lmk26_27 = HexConverter.fromHex("16161616161616161919191919191919").toArray //ZAK
+  val lmk30_31 = HexConverter.fromHex("10101010101010102121212121212121").toArray //ZEK
+  val lmk32_33 = HexConverter.fromHex("30303030303030304141414141414141").toArray // DEK
 
   val lmk34 = HexConverter.fromHex("2A2A2A2A2A2A2A2A").toArray
   val lmk35 = HexConverter.fromHex("2C2C2C2C2C2C2C2C").toArray
 
-  private val keys = Map("02-03" -> lmk02_03, "04-05" -> lmk04_05, "06-07" -> lmk06_07, "14-15" -> lmk14_15, "16-17" -> lmk16_17, "26-27" -> lmk26_27)
+  private val keys = Map("02-03" -> lmk02_03, "04-05" -> lmk04_05, "06-07" -> lmk06_07, "14-15" -> lmk14_15, "16-17" -> lmk16_17, "26-27" -> lmk26_27, "30-31" -> lmk30_31, "32-33" -> lmk32_33)
   private val lmkVariants = Array(0x0, 0xa6, 0x5a, 0x6a, 0xde, 0x2b, 0x50, 0x74, 0x9c)
 
   def lmkVariant(keyName: String, variant: Int) = {

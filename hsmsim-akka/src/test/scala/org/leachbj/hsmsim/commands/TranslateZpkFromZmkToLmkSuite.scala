@@ -29,9 +29,10 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class TranslateZpkFromZmkToLmkSuite extends FunSuite {
   test("translate valid ZPK should match test vector") {
+    val messageHeader = "    "
     val zmkUnderLmk = HexConverter.fromHex("E13D662B185F5F3B08594F89F1FF903A").toArray
     val zpkUnderZmk = HexConverter.fromHex("7BC09407A015F72FC59C32147D2AAE57").toArray
-    val req = TranslateZpkFromZmkToLmkRequest(/*'U'*/zmkUnderLmk, /*'X'*/zpkUnderZmk, false, 'U', 'U', '0')
+    val req = TranslateZpkFromZmkToLmkRequest(messageHeader, /*'U'*/zmkUnderLmk, /*'X'*/zpkUnderZmk, false, 'U', 'U', '0')
     val r = TranslateZpkFromZmkToLmkResponse.createResponse(req)
     assert(r.errorCode === "01")
     assert(r.responseCode === "FB")

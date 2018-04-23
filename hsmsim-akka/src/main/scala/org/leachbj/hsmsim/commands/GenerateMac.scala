@@ -26,9 +26,9 @@ import org.leachbj.hsmsim.crypto.DES
 import org.leachbj.hsmsim.crypto.LMK
 import akka.util.ByteString
 
-case class GenerateMacRequest(blockNumber: Int, keyType: Int, keyLength: Int, macKey: Array[Byte], iv: Option[Array[Byte]], message: Array[Byte]) extends HsmRequest
+case class GenerateMacRequest(messageHeader:String, blockNumber: Int, keyType: Int, keyLength: Int, macKey: Array[Byte], iv: Option[Array[Byte]], message: Array[Byte]) extends HsmRequest
 
-case class GenerateMacResponse(errorCode: String, mac: Array[Byte]) extends HsmResponse {
+case class GenerateMacResponse(messageHeader:String, errorCode: String, mac: Array[Byte]) extends HsmResponse {
   val responseCode = "MT"
 }
 
@@ -39,9 +39,9 @@ object GenerateMacResponse {
   private val (binaryMessage, hexMessage) = (0, 1)
 
   def createResponse(req: GenerateMacRequest): HsmResponse = {
-    if (req.blockNumber != onlyBlock) return ErrorResponse("MT", "05")
-    if (req.keyType != takKeyType && req.keyType != zakKeyType) return ErrorResponse("MT", "04")
-    if (req.keyLength != doubleKeyLen) return ErrorResponse("MT", "06")
+    if (req.blockNumber != onlyBlock) return ErrorResponse(req.messageHeader, "MT", "05")
+    if (req.keyType != takKeyType && req.keyType != zakKeyType) return ErrorResponse(req.messageHeader, "MT", "04")
+    if (req.keyLength != doubleKeyLen) return ErrorResponse(req.messageHeader, "MT", "06")
 
     val macKey = req.keyType match {
       case `takKeyType` =>
@@ -51,8 +51,8 @@ object GenerateMacResponse {
     }
 
     println("mac key: " + HexConverter.toHex(ByteString(macKey)))
-    if (!DES.isParityAdjusted(macKey)) return ErrorResponse("MT", "10")
+    if (!DES.isParityAdjusted(macKey)) return ErrorResponse(req.messageHeader, "MT", "10")
 
-    GenerateMacResponse("00", DES.mac(macKey, req.message))
+    GenerateMacResponse(req.messageHeader, "00", DES.mac(macKey, req.message))
   }
 }

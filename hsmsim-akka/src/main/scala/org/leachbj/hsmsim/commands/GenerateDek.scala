@@ -27,26 +27,24 @@ import org.leachbj.hsmsim.util.HexConverter
 import akka.util.ByteString
 import java.security.SecureRandom
 
-case class GenerateZpkRequest(messageHeader:String, zmk: Array[Byte], isAtallaVariant: Boolean, keySchemeZmk: Byte, keySchemeLmk: Byte, keyCheckType: Byte) extends HsmRequest
+case class GenerateDekRequest(messageHeader:String, isAtallaVariant: Boolean, mode: Byte, keyType: Byte, scheme: Byte) extends HsmRequest
 
-case class GenerateZpkResponse(messageHeader:String, errorCode: String, zpkZmk: Array[Byte], zpkLmk: Array[Byte], checkValue: Array[Byte]) extends HsmResponse {
-  val responseCode = "IB"
+case class GenerateDekResponse(messageHeader:String, errorCode: String, dekLmk: Array[Byte], checkValue: Array[Byte]) extends HsmResponse {
+  val responseCode = "A1"
 }
 
-object GenerateZpkResponse {
-  def createResponse(req: GenerateZpkRequest): HsmResponse = {
-    val zmk = DES.tripleDesDecryptVariant(LMK.lmkVariant("04-05", 0), req.zmk)
-    val zpk = generateZpk
-    val zpkUnderZmk = DES.tripleDesEncrypt(zmk, zpk)
-    val zpkUnderLmk = DES.tripleDesEncryptVariant(LMK.lmkVariant("06-07", 0), zpk)
-    val checkValue = DES.calculateCheckValue(zpk).take(3)
-    GenerateZpkResponse(req.messageHeader, "00", zpkUnderZmk, zpkUnderLmk, checkValue)
+object GenerateDekResponse {
+  def createResponse(req: GenerateDekRequest): HsmResponse = {
+    val dek = generateDek
+    val dekUnderLmk = DES.tripleDesEncryptVariant(LMK.lmkVariant("32-33", 0), dek)
+    val checkValue = DES.calculateCheckValue(dek).take(3)
+    GenerateDekResponse(req.messageHeader, "00", dekUnderLmk, checkValue)
   }
 
-  private def generateZpk = {
-    val zpk = new Array[Byte](16)
-    generator.nextBytes(zpk)
-    DES.adjustParity(zpk)
+  private def generateDek = {
+    val dek = new Array[Byte](16)
+    generator.nextBytes(dek)
+    DES.adjustParity(dek)
   }
 
   private val generator = new SecureRandom

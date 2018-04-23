@@ -38,20 +38,32 @@ import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.DESKeySpec
 import javax.crypto.spec.IvParameterSpec
 
-case class ImportDesKeyRequest(desKey: Array[Byte], rsaPrivKey: Array[Byte], keySchemeLmk: Byte) extends HsmRequest {
+case class ImportDesKeyRequest(messageHeader:String, desKey: Array[Byte], rsaPrivKey: Array[Byte], keyType: Int, keySchemeLmk: Byte) extends HsmRequest {
   override def toString() = {
     "ImportDesKeyRequest(" + HexConverter.toHex(ByteString(desKey)) + ", " + HexConverter.toHex(ByteString(rsaPrivKey)) + "," + keySchemeLmk + ")"
   }
 }
-case class ImportDesKeyResponse(errorCode: String, desKey: Array[Byte], keyCheckValue: Array[Byte]) extends HsmResponse {
+case class ImportDesKeyResponse(messageHeader:String, errorCode: String, desKey: Array[Byte], keyCheckValue: Array[Byte]) extends HsmResponse {
   val responseCode = "GJ"
 }
 object ImportDesKeyResponse {
+
+  private val (zmkKeyType, zpkKeyType) = (1, 2)
+
   private def ceil(x: Int): Int = {
     (Math.ceil(x / 24d)).asInstanceOf[Int] * 3
   }
 
   def createResponse(req: ImportDesKeyRequest): HsmResponse = {
+
+    val lmkKeyType = req.keyType match {
+      case `zmkKeyType` =>
+        LMK.lmkVariant("04-05", 0)
+      case `zpkKeyType` =>
+        LMK.lmkVariant("06-07", 0)
+    }
+
+
     def decryptHsmPrivateKey = {
       def reverse(input: Array[Byte]) = {
         require(input.length % 8 == 0, "Input length must be a multiple of 8.")
@@ -142,7 +154,7 @@ object ImportDesKeyResponse {
 
     if (req.desKey.length > key.getModulus().bitLength() / 8) {
       println("Imported des key too long")
-      return ErrorResponse("GJ", "76")
+      return ErrorResponse(req.messageHeader, "GJ", "76")
     }
 
     def decryptDesKey = {
@@ -158,7 +170,7 @@ object ImportDesKeyResponse {
     }
 
     val d = decryptDesKey
-    if (d.isEmpty) return ErrorResponse("GJ", "15")
+    if (d.isEmpty) return ErrorResponse(req.messageHeader, "GJ", "15")
     val decryptedDesKeyNoParity = d.get
 
     println("deskey: " + HexConverter.toHex(ByteString(decryptedDesKeyNoParity)))
@@ -167,6 +179,6 @@ object ImportDesKeyResponse {
     val decryptedDesKey = DES.adjustParity(decryptedDesKeyNoParity)
     println("deskey: " + HexConverter.toHex(ByteString(decryptedDesKey)))
 
-    ImportDesKeyResponse("00", DES.tripleDesEncryptVariant(LMK.lmkVariant("06-07", 0), decryptedDesKey), DES.calculateCheckValue(decryptedDesKey).take(6))
+    ImportDesKeyResponse(req.messageHeader, "00", DES.tripleDesEncryptVariant(lmkKeyType, decryptedDesKey), DES.calculateCheckValue(decryptedDesKey).take(6))
   }
 }

@@ -29,10 +29,12 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class TranslatePinZpkToLmkSuite extends FunSuite {
   test("translate valid pinblock should return encrypted pin") {
+
+    val messageHeader = "    "
     val zpk = HexConverter.fromHex("971803BA969012152827CC97A98D18D50BE6559CDFF6F7E1").toArray
     val sourcePinBlock = HexConverter.fromHex("F2B66A1070EADC47").toArray
     val accountNumber = "000001000376"
-    val req = TranslatePinZpkToLmkRequest(zpk, sourcePinBlock, "05", accountNumber)
+    val req = TranslatePinZpkToLmkRequest(messageHeader, zpk, sourcePinBlock, "05", accountNumber)
     val r = TranslatePinZpkToLmkResponse.createResponse(req)
     assert(r.errorCode === "00")
     assert(r.responseCode === "JF")

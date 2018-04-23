@@ -21,33 +21,46 @@
  */
 package org.leachbj.hsmsim.commands
 
-import org.leachbj.hsmsim.crypto.LMK
 import org.leachbj.hsmsim.crypto.DES
+import org.leachbj.hsmsim.crypto.LMK
 import org.leachbj.hsmsim.util.HexConverter
+
 import akka.util.ByteString
-import java.security.SecureRandom
 
-case class GenerateZpkRequest(messageHeader:String, zmk: Array[Byte], isAtallaVariant: Boolean, keySchemeZmk: Byte, keySchemeLmk: Byte, keyCheckType: Byte) extends HsmRequest
 
-case class GenerateZpkResponse(messageHeader:String, errorCode: String, zpkZmk: Array[Byte], zpkLmk: Array[Byte], checkValue: Array[Byte]) extends HsmResponse {
-  val responseCode = "IB"
+case class DesDecryptRequest(messageHeader:String, blockNumber: Int, keyType: Int, desKey: Array[Byte], iv: Option[Array[Byte]], message: Array[Byte]) extends HsmRequest
+case class DesDecryptResponse(messageHeader:String, errorCode: String, clearMessage: Array[Byte]) extends HsmResponse {
+  val responseCode = "M3"
 }
 
-object GenerateZpkResponse {
-  def createResponse(req: GenerateZpkRequest): HsmResponse = {
-    val zmk = DES.tripleDesDecryptVariant(LMK.lmkVariant("04-05", 0), req.zmk)
-    val zpk = generateZpk
-    val zpkUnderZmk = DES.tripleDesEncrypt(zmk, zpk)
-    val zpkUnderLmk = DES.tripleDesEncryptVariant(LMK.lmkVariant("06-07", 0), zpk)
-    val checkValue = DES.calculateCheckValue(zpk).take(3)
-    GenerateZpkResponse(req.messageHeader, "00", zpkUnderZmk, zpkUnderLmk, checkValue)
-  }
+object DesDecryptResponse {
 
-  private def generateZpk = {
-    val zpk = new Array[Byte](16)
-    generator.nextBytes(zpk)
-    DES.adjustParity(zpk)
-  }
+  private val (zekKeyType, dekKeyType) = (1, 2)
 
-  private val generator = new SecureRandom
+  def createResponse(req: DesDecryptRequest): HsmResponse = {
+
+
+    val clearDesKey = req.keyType match {
+      case `dekKeyType` =>
+        DES.tripleDesDecryptVariant(LMK.lmkVariant("32-33", 0), req.desKey)
+      case `zekKeyType` =>
+        DES.tripleDesDecryptVariant(LMK.lmkVariant("30-31", 0), req.desKey)
+    }
+
+
+
+    def decrypt(messageByte: Array[Byte]) = {
+
+      println("Clear key: " +  HexConverter.toHex(ByteString(clearDesKey)))
+      println("Cryptogram: " +  HexConverter.toHex(ByteString(messageByte)))
+      val cipherText = DES.tripleDesDecrypt(clearDesKey, messageByte)
+      println("CipherText: " + HexConverter.toHex(ByteString(cipherText)))
+
+      cipherText
+    }
+
+
+    val clearMessage = decrypt(req.message)
+    DesDecryptResponse(req.messageHeader, "00", clearMessage)
+  }
 }

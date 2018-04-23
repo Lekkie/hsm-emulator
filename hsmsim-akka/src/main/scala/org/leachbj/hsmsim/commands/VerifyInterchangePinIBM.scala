@@ -27,8 +27,8 @@ import org.leachbj.hsmsim.util.HexConverter
 import akka.util.ByteString
 import org.leachbj.hsmsim.crypto.IBMPinValidation
 
-case class VerifyInterchangePinIBMRequest(zpk: Array[Byte], pvk: Array[Byte], pinBlock: Array[Byte], pinBlockFormat: String, checkLength: Int, accountNumber: String, decimalisation: Array[Byte], pinValidation: String, offset: String) extends HsmRequest
-case class VerifyInterchangePinIBMResponse(errorCode:String) extends HsmResponse {
+case class VerifyInterchangePinIBMRequest(messageHeader:String, zpk: Array[Byte], pvk: Array[Byte], pinBlock: Array[Byte], pinBlockFormat: String, checkLength: Int, accountNumber: String, decimalisation: Array[Byte], pinValidation: String, offset: String) extends HsmRequest
+case class VerifyInterchangePinIBMResponse(messageHeader:String, errorCode:String) extends HsmResponse {
   val responseCode = "EB"
 }
 
@@ -55,7 +55,7 @@ object VerifyInterchangePinIBMResponse {
 
     println("Extracted: " + extractedPin)
 
-    if (derivedPin == extractedPin) VerifyInterchangePinIBMResponse("00")
-    else VerifyInterchangePinIBMResponse("01")
+    if (derivedPin == extractedPin) VerifyInterchangePinIBMResponse(req.messageHeader, "00")
+    else VerifyInterchangePinIBMResponse(req.messageHeader, "01")
   }
 }

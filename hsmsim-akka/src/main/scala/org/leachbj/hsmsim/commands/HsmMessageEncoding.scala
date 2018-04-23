@@ -22,22 +22,24 @@
 
 import org.leachbj.hsmsim.util.HexConverter
 import akka.util.ByteString
+import java.math.BigInteger
 
 trait HsmRequest
 
 trait HsmResponse {
+  val messageHeader: String
   val responseCode: String
   val errorCode: String
 }
 
-case class UnknownHsmRequest(cmd: String) extends HsmRequest
+case class UnknownHsmRequest(messageHeader:String, cmd: String) extends HsmRequest
 
-case class ErrorResponse(responseCode: String, errorCode: String) extends HsmResponse
+case class ErrorResponse(messageHeader:String, responseCode: String, errorCode: String) extends HsmResponse
 
-case class NcHsmResponse(responseCode: String, errorCode: String, lmkCheckValue: String, firmwareVersion: String) extends HsmResponse
+case class NcHsmResponse(messageHeader:String, responseCode: String, errorCode: String, lmkCheckValue: String, firmwareVersion: String) extends HsmResponse
 
-case class GenerateRandomPinRequest(accountNumber: String, pinLength: Int) extends HsmRequest
-case class GenerateRandomPinResponse(errorCode: String, pin: String) extends HsmResponse {
+case class GenerateRandomPinRequest(messageHeader:String, accountNumber: String, pinLength: Int) extends HsmRequest
+case class GenerateRandomPinResponse(messageHeader:String, errorCode: String, pin: String) extends HsmResponse {
   val responseCode = "JB"
 }
 
@@ -87,7 +89,7 @@ object HsmMessageEncoding {
 
     def readHex(len: Int) = HexConverter.fromHex(readString(len))
 
-    iter.drop(4) // skip header
+    val msgHeader = readString(4) //iter.drop(4) // skip header
     val cmd = readString(2)
     println("got cmd: " + cmd)
     cmd match {
@@ -99,7 +101,7 @@ object HsmMessageEncoding {
         val sourcePinBlockFormat = readString(2)
         val destinationPinBlockFormat = readString(2)
         val accountNumber = readString(12)
-        TranslatePinZpkToAnotherRequest(sourceZpk, destZpk, maxPinLength, sourcePinBlock, sourcePinBlockFormat, destinationPinBlockFormat, accountNumber)
+        TranslatePinZpkToAnotherRequest(msgHeader, sourceZpk, destZpk, maxPinLength, sourcePinBlock, sourcePinBlockFormat, destinationPinBlockFormat, accountNumber)
       case "DE" =>
         val pvk = readKey.toArray
         println(HexConverter.toHex(ByteString(pvk)))
@@ -109,7 +111,7 @@ object HsmMessageEncoding {
         val accountNumber = readString(12)
         val decimalisation = readStringAsBytes(16)
         val pinValidationData = readString(12)
-        GenerateIBMPinOffsetRequest(pvk, pin, minPinLength, accountNumber, decimalisation, pinValidationData)
+        GenerateIBMPinOffsetRequest(msgHeader, pvk, pin, minPinLength, accountNumber, decimalisation, pinValidationData)
       case "EA" =>
         val zpk = readKey.toArray
         val pvk = readKey.toArray
@@ -121,7 +123,7 @@ object HsmMessageEncoding {
         val decimalisation = readStringAsBytes(16)
         val pinValidationData = readString(12)
         val offset = readString(12)
-        VerifyInterchangePinIBMRequest(zpk, pvk, pinBlock, pinBlockFormat, checkLength, accountNumber, decimalisation, pinValidationData, offset)
+        VerifyInterchangePinIBMRequest(msgHeader, zpk, pvk, pinBlock, pinBlockFormat, checkLength, accountNumber, decimalisation, pinValidationData, offset)
       case "FA" =>
         val zmk = readKey.toArray
         val zpk = readKey.toArray
@@ -129,18 +131,26 @@ object HsmMessageEncoding {
         val atalla = if (delOrAtalla != ';') readNumeric(1) == 1 else false
         val delimiter = if ((delOrAtalla == ';' || atalla) && iter.hasNext) iter.getByte == ';' else false
         val (keySchemeZmk, keySchemeLmk, checkValueType) = if (delimiter) (iter.getByte, iter.getByte, iter.getByte) else ('0'.toByte, '0'.toByte, '0'.toByte)
-        TranslateZpkFromZmkToLmkRequest(zmk, zpk, atalla, keySchemeZmk, keySchemeLmk, checkValueType)
+        TranslateZpkFromZmkToLmkRequest(msgHeader, zmk, zpk, atalla, keySchemeZmk, keySchemeLmk, checkValueType)
       case "IA" =>
         val zmk = readKey.toArray
         val delOrAtalla = iter.head
         val atalla = if (delOrAtalla != ';') readNumeric(1) == 1 else false
         val delimiter = if ((delOrAtalla == ';' || atalla) && iter.hasNext) iter.getByte == ';' else false
         val (keySchemeZmk, keySchemeLmk, checkValueType) = if (delimiter) (iter.getByte, iter.getByte, iter.getByte) else ('0'.toByte, '0'.toByte, '0'.toByte)
-        GenerateZpkRequest(zmk, atalla, keySchemeZmk, keySchemeLmk, checkValueType)
+        GenerateZpkRequest(msgHeader, zmk, atalla, keySchemeZmk, keySchemeLmk, checkValueType)
+      case "A0" =>
+        val delOrAtalla = iter.head
+        val atalla = if (delOrAtalla != ';') readNumeric(1) == 1 else false
+        val delimiter = if ((delOrAtalla == ';' || atalla) && iter.hasNext) iter.getByte == ';' else false
+        val (mode, keyType, scheme) = if (delimiter) (iter.getByte, iter.getByte, iter.getByte) else ('0'.toByte, '0'.toByte, '0'.toByte)
+        GenerateDekRequest(msgHeader, atalla, mode, keyType, scheme)
       case "GI" =>
         val encryptionIdentifier = readString(2)
         val padModeIdentifier = readString(2)
         val desKeyType = readLmkType
+        val keyType = if (desKeyType.startsWith("00")) 1 else 2
+       // val desKeyType = readNumeric(1)
         val deskey = readLengthBytes
         val delimiter = iter.getByte
         val secretKeyFlag = readString(2)
@@ -148,15 +158,50 @@ object HsmMessageEncoding {
         val delimiter2 = iter.getByte
         val keySchemeZmk = iter.getByte
         val keySchemeLmk = iter.getByte
-        ImportDesKeyRequest(deskey, secretKey, keySchemeLmk)
+        ImportDesKeyRequest(msgHeader, deskey, secretKey, keyType, keySchemeLmk)
+      case "GK" =>
+        val encryptionIdentifier = readString(2)
+        val padModeIdentifier = readString(2)
+        val desKeyType = readLmkType
+        val keyType = if (desKeyType.startsWith("00")) 1 else 2
+        // val desKeyType = readNumeric(1)
+        val desKeyFlag = readString(1)
+        val desKey = readKey.toArray
+        //println("desKey: " + HexConverter.toHex(ByteString(desKey)))
+        val delimiter = iter.getByte
+        val publicKey = readLengthBytes
+        val delimiter2 = iter.getByte
+        val keySchemeZmk = iter.getByte
+        val keySchemeLmk = iter.getByte
+        ExportToRsaKeyRequest(msgHeader, desKey, publicKey, keyType, keySchemeLmk)
       case "JE" =>
         val zpk = readKey.toArray
         val pinBlock = readHex(16).toArray
         val pinBlockFormat = readString(2)
         val accountNumber = readString(12)
-        TranslatePinZpkToLmkRequest(zpk, pinBlock, pinBlockFormat, accountNumber)
+        TranslatePinZpkToLmkRequest(msgHeader, zpk, pinBlock, pinBlockFormat, accountNumber)
       case "JA" =>
-        GenerateRandomPinRequest(readString(12), readString(2).toInt)
+        GenerateRandomPinRequest(msgHeader, readString(12), readString(2).toInt)
+      case "M0" =>
+        val mode = readHexNumeric(2)
+        val keyType = readNumeric(1)
+        val messageType = readNumeric(1)
+        val desKey = readKey.toArray
+        val iv = if (mode == 1 || mode == 2 || mode == 3) Some(readHex(16).toArray) else None
+        val messageLen = readHexNumeric(4)
+        val msgStr = if (messageType == 0)  readStringAsBytes(messageLen).map(_.toChar).mkString else readHex(messageLen * 2).map(_.toChar).mkString
+        val message = HexConverter.fromHex(msgStr).toArray
+        DesEncryptRequest(msgHeader, mode, keyType, desKey, iv, message)
+      case "M2" =>
+        val mode = readHexNumeric(2)
+        val keyType = readNumeric(1)
+        val messageType = readNumeric(1)
+        val desKey = readKey.toArray
+        val iv = if (mode == 1 || mode == 2 || mode == 3) Some(readHex(16).toArray) else None
+        val messageLen = readHexNumeric(4)
+        val msgStr = if (messageType == 0)  readStringAsBytes(messageLen).map(_.toChar).mkString else readHex(messageLen * 2).map(_.toChar).mkString
+        val message = HexConverter.fromHex(msgStr).toArray
+        DesDecryptRequest(msgHeader, mode, keyType, desKey, iv, message)
       case "MS" =>
         val messageBlockNumber = readNumeric(1)
         val keyType = readNumeric(1)
@@ -166,18 +211,17 @@ object HsmMessageEncoding {
         val iv = if (messageBlockNumber == 2 || messageBlockNumber == 3) Some(readHex(16).toArray) else None
         val messageLen = readHexNumeric(4)
         val message = if (messageType == 0) readStringAsBytes(messageLen) else readHex(messageLen * 2).toArray
-        GenerateMacRequest(messageBlockNumber, keyType, keyLength, macKey, iv, message)
+        GenerateMacRequest(msgHeader, messageBlockNumber, keyType, keyLength, macKey, iv, message)
       case "SA" =>
         val keyType = readNumeric(1)
         val keyLength = readNumeric(4)
         val publicKeyEncoding = readNumeric(2)
         val publicExponentLength = Math.ceil(readNumeric(4) / 8.toDouble).toInt		// length is supplied in bits
-        
         val publicExponent = readStringAsBytes(publicExponentLength)
         val exp = BigInt(1, publicExponent).toInt
-        GenerateRSAKeySetRequest(keyType, keyLength, publicKeyEncoding, exp)
+        GenerateRSAKeySetRequest(msgHeader, keyType, keyLength, publicKeyEncoding, exp)
       case _ =>
-        UnknownHsmRequest(cmd)
+        UnknownHsmRequest(msgHeader, cmd)
     }
   }
 
@@ -199,7 +243,8 @@ object HsmMessageEncoding {
 
     def padString(s: String, len: Int, pad: Char) = s ++ Array.fill(len - s.length)(pad)
     
-    bs ++= ByteString(messageHeader)
+    //bs ++= ByteString(messageHeader)
+    bs ++= ByteString(msg.messageHeader)
     bs ++= ByteString(msg.responseCode)
     bs ++= ByteString(msg.errorCode)
     
@@ -207,6 +252,11 @@ object HsmMessageEncoding {
       case i: ImportDesKeyResponse =>
         writeKey(ByteString(i.desKey))
         writeHex(ByteString(i.keyCheckValue))
+        bs ++= ByteString("000000000000")
+      case exportToRsaKey: ExportToRsaKeyResponse =>
+        writeIntLen(4, exportToRsaKey.rsaEncrypted.length)
+        writeKey(ByteString(exportToRsaKey.rsaEncrypted))
+        writeHex(ByteString(exportToRsaKey.keyCheckValue))
         bs ++= ByteString("000000000000")
       case g: GenerateRandomPinResponse =>
         bs ++= ByteString(g.pin)
@@ -231,8 +281,17 @@ object HsmMessageEncoding {
         writeHex(ByteString(generateZpk.zpkLmk))
         writeHex(ByteString(generateZpk.checkValue))
         bs ++= ByteString("0000000000")
+      case generateDek: GenerateDekResponse =>
+        bs += 'U'
+        writeHex(ByteString(generateDek.dekLmk))
+        writeHex(ByteString(generateDek.checkValue))
+        bs ++= ByteString("0000000000")
       case generateOffset: GenerateIBMPinOffsetResponse =>
         bs ++= ByteString(padString(generateOffset.offset, 12, 'F'))
+      case encrypt: DesEncryptResponse =>
+        writeHex(ByteString(encrypt.encryptedMessage))
+      case decrypt: DesDecryptResponse =>
+        writeHex(ByteString(decrypt.clearMessage))
       case generateMac: GenerateMacResponse =>
         writeHex(ByteString(generateMac.mac))
       case generateRsa: GenerateRSAKeySetResponse =>

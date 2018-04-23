@@ -30,8 +30,9 @@ import org.leachbj.hsmsim.crypto.DES
 @RunWith(classOf[JUnitRunner])
 class GenerateZpkSuite extends FunSuite {
   test("generate zpk") {
+    val messageHeader = "    "
     val zmkUnderLmk = HexConverter.fromHex("E13D662B185F5F3B08594F89F1FF903A").toArray
-    val req = GenerateZpkRequest(zmkUnderLmk, false, 'X', 'U', '0')
+    val req = GenerateZpkRequest(messageHeader, zmkUnderLmk, false, 'X', 'U', '0')
     val r = GenerateZpkResponse.createResponse(req)
     assert(r.errorCode === "00")
     assert(r.responseCode === "IB")

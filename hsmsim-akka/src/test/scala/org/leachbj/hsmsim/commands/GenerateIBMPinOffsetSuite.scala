@@ -32,12 +32,13 @@ class GenerateIBMPinOffsetSuite extends FunSuite {
   test("generate pin offset test vector") {
     val pvk = HexConverter.fromHex("AF9958474101D950930D1FC86F99447E10B3BADFAA10458E").toArray
     // this is not the right value, see TranslatePinZpkToLmkSuite
+    val messageHeader = "    "
     val encryptedPin = HexConverter.fromHex("24698C68CF4FA4F9").toArray
     val minLength = 5
     val accountNumber = "000001000376"
     val decimalisation = "0123456789012345".getBytes("UTF-8")
     val pinValidation = "1234567890NF"
-    val r = GenerateIBMPinOffsetRequest(pvk, encryptedPin, minLength, accountNumber, decimalisation, pinValidation)
+    val r = GenerateIBMPinOffsetRequest(messageHeader, pvk, encryptedPin, minLength, accountNumber, decimalisation, pinValidation)
     val resp = GenerateIBMPinOffsetResponse.createResponse(r)
     assert(resp.errorCode === "00")
     assert(resp.responseCode === "DF")

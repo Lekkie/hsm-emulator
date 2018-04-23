@@ -23,32 +23,7 @@ package org.leachbj.hsmsim.akka
 
 import java.net.InetSocketAddress
 
-import org.leachbj.hsmsim.commands.ErrorResponse
-import org.leachbj.hsmsim.commands.GenerateIBMPinOffsetRequest
-import org.leachbj.hsmsim.commands.GenerateIBMPinOffsetResponse
-import org.leachbj.hsmsim.commands.GenerateMacRequest
-import org.leachbj.hsmsim.commands.GenerateMacResponse
-import org.leachbj.hsmsim.commands.GenerateRSAKeySetRequest
-import org.leachbj.hsmsim.commands.GenerateRSAKeySetResponse
-import org.leachbj.hsmsim.commands.GenerateRandomPinRequest
-import org.leachbj.hsmsim.commands.GenerateRandomPinResponse
-import org.leachbj.hsmsim.commands.GenerateZpkRequest
-import org.leachbj.hsmsim.commands.GenerateZpkResponse
-import org.leachbj.hsmsim.commands.HsmMessageEncoding
-import org.leachbj.hsmsim.commands.HsmRequest
-import org.leachbj.hsmsim.commands.HsmResponse
-import org.leachbj.hsmsim.commands.ImportDesKeyRequest
-import org.leachbj.hsmsim.commands.ImportDesKeyResponse
-import org.leachbj.hsmsim.commands.TranslatePinZpkToAnotherRequest
-import org.leachbj.hsmsim.commands.TranslatePinZpkToAnotherResponse
-import org.leachbj.hsmsim.commands.TranslatePinZpkToLmkRequest
-import org.leachbj.hsmsim.commands.TranslatePinZpkToLmkResponse
-import org.leachbj.hsmsim.commands.TranslateZpkFromZmkToLmkRequest
-import org.leachbj.hsmsim.commands.TranslateZpkFromZmkToLmkResponse
-import org.leachbj.hsmsim.commands.UnknownHsmRequest
-import org.leachbj.hsmsim.commands.VerifyInterchangePinIBMRequest
-import org.leachbj.hsmsim.commands.VerifyInterchangePinIBMResponse
-
+import org.leachbj.hsmsim.commands._
 import akka.actor.Actor
 import akka.actor.ActorLogging
 import akka.actor.ActorRef
@@ -138,10 +113,16 @@ class RequestProcessor(init: Init[WithinActorContext, HsmResponse, HsmRequest]) 
   def receive: Receive = {
     case t: TranslatePinZpkToAnotherRequest =>
       sender ! init.Command(TranslatePinZpkToAnotherResponse.createResponse(t))
+    case encrypt: DesEncryptRequest =>
+      sender ! init.Command(DesEncryptResponse.createResponse(encrypt))
+    case decrypt: DesDecryptRequest =>
+      sender ! init.Command(DesDecryptResponse.createResponse(decrypt))
     case i: ImportDesKeyRequest =>
       sender ! init.Command(ImportDesKeyResponse.createResponse(i))
+    case exportToRsaKey: ExportToRsaKeyRequest =>
+      sender ! init.Command(ExportToRsaKeyResponse.createResponse(exportToRsaKey))
     case g: GenerateRandomPinRequest =>
-      sender ! init.Command(GenerateRandomPinResponse("00", "12345"))
+      sender ! init.Command(GenerateRandomPinResponse(g.messageHeader, "00", "12345"))
     case v: VerifyInterchangePinIBMRequest =>
       sender ! init.Command(VerifyInterchangePinIBMResponse.createResponse(v))
     case translatePin: TranslatePinZpkToLmkRequest =>
@@ -152,6 +133,8 @@ class RequestProcessor(init: Init[WithinActorContext, HsmResponse, HsmRequest]) 
       sender ! init.Command(TranslateZpkFromZmkToLmkResponse.createResponse(translateZpk))
     case generateZpk: GenerateZpkRequest =>
       sender ! init.Command(GenerateZpkResponse.createResponse(generateZpk))
+    case generateDek: GenerateDekRequest =>
+      sender ! init.Command(GenerateDekResponse.createResponse(generateDek))
     case generateMac: GenerateMacRequest =>
       sender ! init.Command(GenerateMacResponse.createResponse(generateMac))
     case generateRsa: GenerateRSAKeySetRequest =>
@@ -159,7 +142,7 @@ class RequestProcessor(init: Init[WithinActorContext, HsmResponse, HsmRequest]) 
     case unknown: UnknownHsmRequest =>
       log.error("Unknown command type {}", unknown.cmd)
       val responseCode = "" + unknown.cmd.charAt(0) + (unknown.cmd.charAt(1) + 1)
-      sender ! init.Command(ErrorResponse(responseCode, "99"))
+      sender ! init.Command(ErrorResponse(unknown.messageHeader, responseCode, "99"))
     case _ =>
       log.error("Unhandled message!")
   }

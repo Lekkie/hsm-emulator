@@ -24,34 +24,48 @@ package org.leachbj.hsmsim.commands
 import java.security.KeyPairGenerator
 import java.security.interfaces.RSAPrivateCrtKey
 import java.security.interfaces.RSAPublicKey
-import java.security.spec.RSAKeyGenParameterSpec
+import java.security.spec.{RSAKeyGenParameterSpec, RSAPublicKeySpec}
+import java.security.spec.RSAPublicKeySpec
+
 import org.bouncycastle.asn1.x509.RSAPublicKeyStructure
-import org.leachbj.hsmsim.crypto.LMK
+import org.leachbj.hsmsim.crypto.{DES, LMK}
 import org.leachbj.hsmsim.util.HexConverter
 import akka.util.ByteString
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.DESKeySpec
 import javax.crypto.spec.IvParameterSpec
+
+
 import scala.math.BigInt._
 import java.math.BigInteger
 
-case class GenerateRSAKeySetRequest(keyType: Int, keyLength: Int, publicKeyEncoding: Int, publicExponent: Int) extends HsmRequest
+case class GenerateRSAKeySetRequest(messageHeader:String, keyType: Int, keyLength: Int, publicKeyEncoding: Int, publicExponent: Int) extends HsmRequest
 
-case class GenerateRSAKeySetResponse(publicKey: Array[Byte], privateKey: Array[Byte]) extends HsmResponse {
+case class GenerateRSAKeySetResponse(messageHeader:String, publicKey: Array[Byte], privateKey: Array[Byte]) extends HsmResponse {
   val errorCode = "00"
   val responseCode = "SB"
 }
 
 object GenerateRSAKeySetResponse {
+
+  private val (berPublicKeyEncoding, derPublicKeyEncoding) = (1, 2)
+
   def createResponse(req: GenerateRSAKeySetRequest): HsmResponse = {
     val flags = req.keyType.toByte
 
-    val (pub, priv) = generateRsaKeyPair(req.keyLength, BigInteger.valueOf(req.publicExponent))
-    val pubEncoded = encodePublicKey(pub)
-    val privEncoded = encodePrivateKey(flags, priv)
+    val encoding = req.publicKeyEncoding match {
+      case `berPublicKeyEncoding` =>
+        "BER"
+      case `derPublicKeyEncoding` =>
+        "DER"
+    }
 
-    GenerateRSAKeySetResponse(pubEncoded, privEncoded)
+    val (pub, priv) = generateRsaKeyPair(req.keyLength, BigInteger.valueOf(req.publicExponent))
+    println("Encoding: " +  encoding)
+    val pubEncoded = encodePublicKey(pub, encoding)
+    val privEncoded = encodePrivateKey(flags, priv)
+    GenerateRSAKeySetResponse(req.messageHeader, pubEncoded, privEncoded)
   }
 
   private def generateRsaKeyPair(keyLength: Int, modulus: BigInteger) = {
@@ -61,10 +75,10 @@ object GenerateRSAKeySetResponse {
     (keyPair.getPublic.asInstanceOf[RSAPublicKey], keyPair.getPrivate.asInstanceOf[RSAPrivateCrtKey])
   }
 
-  private def encodePublicKey(pubKey: RSAPublicKey) = {
+  private def encodePublicKey(pubKey: RSAPublicKey, encoding: String) = {
     println(pubKey.getFormat)
-    
-    new RSAPublicKeyStructure(pubKey.getModulus(), pubKey.getPublicExponent()).getEncoded()
+    new RSAPublicKeyStructure(pubKey.getModulus(), pubKey.getPublicExponent()).getEncoded(encoding)
+
   }
 
   private def encodePrivateKey(flags: Byte, privKey: RSAPrivateCrtKey) = {

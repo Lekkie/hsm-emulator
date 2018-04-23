@@ -39,7 +39,7 @@ import org.leachbj.hsmsim.crypto.IBMPinValidation
  * @param pinValidation 12A - User-defined data consisting of hexadecimal characters and the character N, which indicates to the HSM where to insert the last 5 digits of the account number.
  *
  */
-case class GenerateIBMPinOffsetRequest(pvk: Array[Byte], pinUnderLmk: Array[Byte], checkLength: Int, accountNumber: String, decimalisation: Array[Byte], pinValidation: String) extends HsmRequest {
+case class GenerateIBMPinOffsetRequest(messageHeader:String, pvk: Array[Byte], pinUnderLmk: Array[Byte], checkLength: Int, accountNumber: String, decimalisation: Array[Byte], pinValidation: String) extends HsmRequest {
   override def toString() = {
     "GenerateIBMPinOffsetRequest(" + HexConverter.toHex(ByteString(pvk)) + ", " + HexConverter.toHex(ByteString(pinUnderLmk)) + "," + checkLength + "," + accountNumber + "," + HexConverter.toHex(ByteString(decimalisation)) + "," + pinValidation + ")"
   }
@@ -51,7 +51,7 @@ case class GenerateIBMPinOffsetRequest(pvk: Array[Byte], pinUnderLmk: Array[Byte
  * @constructor create a successful response
  * @param offset 12N - the PIN offset
  */
-case class GenerateIBMPinOffsetResponse(offset: String) extends HsmResponse {
+case class GenerateIBMPinOffsetResponse(messageHeader:String, offset: String) extends HsmResponse {
   val errorCode = "00"
   val responseCode = "DF"
 }
@@ -76,6 +76,6 @@ object GenerateIBMPinOffsetResponse {
     val naturalPin = IBMPinValidation.digitReplacement(encryptedValidation, req.decimalisation, req.checkLength)
 
     val offset = IBMPinValidation.deriveOffsetFromPin(naturalPin, extractedPin)
-    GenerateIBMPinOffsetResponse(offset)
+    GenerateIBMPinOffsetResponse(req.messageHeader, offset)
   }
 }

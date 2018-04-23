@@ -26,9 +26,9 @@ import org.leachbj.hsmsim.crypto.DES
 import org.leachbj.hsmsim.util.HexConverter
 import akka.util.ByteString
 
-case class TranslateZpkFromZmkToLmkRequest(zmk: Array[Byte], zpk: Array[Byte], isAtallaVariant: Boolean, keySchemeZmk: Byte, keySchemeLmk: Byte, keyCheckType: Byte) extends HsmRequest
+case class TranslateZpkFromZmkToLmkRequest(messageHeader:String, zmk: Array[Byte], zpk: Array[Byte], isAtallaVariant: Boolean, keySchemeZmk: Byte, keySchemeLmk: Byte, keyCheckType: Byte) extends HsmRequest
 
-case class TranslateZpkFromZmkToLmkResponse(errorCode: String, zpk: Array[Byte], checkValue: Array[Byte]) extends HsmResponse {
+case class TranslateZpkFromZmkToLmkResponse(messageHeader:String, errorCode: String, zpk: Array[Byte], checkValue: Array[Byte]) extends HsmResponse {
   val responseCode = "FB"
 }
 
@@ -42,6 +42,6 @@ object TranslateZpkFromZmkToLmkResponse {
     val checkValue = DES.calculateCheckValue(adjustedZpk).take(3)
     // return 01 if the parity of the ZPK was invalid
     val errorCode = if (zpk == adjustedZpk) "00" else "01"
-    TranslateZpkFromZmkToLmkResponse(errorCode, zpkUnderLmk, checkValue)
+    TranslateZpkFromZmkToLmkResponse(req.messageHeader, errorCode, zpkUnderLmk, checkValue)
   }
 }

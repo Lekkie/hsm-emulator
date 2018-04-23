@@ -1,7 +1,9 @@
-[hsmsim](http://github.com/leachbj/hsmsim) is a simple HSM simulator providing a number of commands compatible
-with a Thales 8000/9000 HSM.  The simulator only supports a small number of commands and can only use test LMKs
-so should not be considered a replacement for a real HSM however it may be useful during a development of software
+HSM Simulator is a simple HSM simulator providing a number of commands compatible
+with a Thales 8000/9000 HSM. It is based on the work done by [hsmsim](http://github.com/leachbj/hsmsim) and I extended to support a couple more commands. 
+The simulator only supports a small number of commands and can only use test LMKs so should not be considered a replacement for a real HSM however it may be useful during a development of software
 that interacts with a HSM.
+
+
 
 ## Quick start
 

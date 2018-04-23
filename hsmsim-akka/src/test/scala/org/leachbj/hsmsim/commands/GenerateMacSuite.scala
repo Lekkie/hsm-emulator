@@ -30,7 +30,8 @@ import org.scalatest.matchers.ShouldMatchers
 @RunWith(classOf[JUnitRunner])
 class GenerateMacSuite extends FunSuite with ShouldMatchers {
   test("generateMac with TAK") {
-    val generateReq = GenerateMacRequest(0, 0, 1, HexConverter.fromHex("90A17A99E4BA32475E692D7AAE177BBD").toArray,
+    val messageHeader = "    "
+    val generateReq = GenerateMacRequest(messageHeader, 0, 0, 1, HexConverter.fromHex("90A17A99E4BA32475E692D7AAE177BBD").toArray,
       None, "1234567887654321".getBytes)
     val resp = GenerateMacResponse.createResponse(generateReq)
     assert(resp.errorCode === "00")
@@ -41,7 +42,8 @@ class GenerateMacSuite extends FunSuite with ShouldMatchers {
   }
   
   test("generateMac with ZAK") {
-    val generateReq = GenerateMacRequest(0, 1, 1, HexConverter.fromHex("2549A1834EFDDC9629CBD8DC5C982D75").toArray,
+    val messageHeader = "    "
+    val generateReq = GenerateMacRequest(messageHeader, 0, 1, 1, HexConverter.fromHex("2549A1834EFDDC9629CBD8DC5C982D75").toArray,
       None, "1234567887654321".getBytes)
     val resp = GenerateMacResponse.createResponse(generateReq)
     assert(resp.errorCode === "00")

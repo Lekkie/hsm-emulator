@@ -39,6 +39,7 @@ class VerifyInterchangePinIBMSuite extends FunSuite {
 //  }
 
   test("valid pin data should return 00") {
+    val messageHeader = "    "
     val zpk = HexConverter.fromHex("971803BA969012152827CC97A98D18D50BE6559CDFF6F7E1").toArray
     val pvk = HexConverter.fromHex("AF9958474101D950930D1FC86F99447E10B3BADFAA10458E").toArray
     val pinBlock = HexConverter.fromHex("F2B66A1070EADC47").toArray
@@ -48,7 +49,7 @@ class VerifyInterchangePinIBMSuite extends FunSuite {
     val decimalisation = "0123456789012345".getBytes("UTF-8")
     val pinValidation = "1234567890NF"
     val offset = "17702FFFFFFF"
-    val req = VerifyInterchangePinIBMRequest(zpk, pvk, pinBlock, pinBlockFormat, checkLength, accountNumber, decimalisation, pinValidation, offset)
+    val req = VerifyInterchangePinIBMRequest(messageHeader, zpk, pvk, pinBlock, pinBlockFormat, checkLength, accountNumber, decimalisation, pinValidation, offset)
     val r = VerifyInterchangePinIBMResponse.createResponse(req)
     assert(r.errorCode === "00")
     assert(r.responseCode === "EB")

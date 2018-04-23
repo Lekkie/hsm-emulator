@@ -38,7 +38,8 @@ import java.security.spec.RSAPublicKeySpec
 @RunWith(classOf[JUnitRunner])
 class GenerateRSAKeySetSuite extends FunSuite {
   test("should generate random key") {
-    val req = GenerateRSAKeySetRequest(0, 512, 1, 0x1001)
+    val messageHeader = "    "
+    val req = GenerateRSAKeySetRequest(messageHeader, 0, 512, 1, 0x1001)
     val resp = GenerateRSAKeySetResponse.createResponse(req);
     assert(resp.errorCode === "00")
     assert(resp.responseCode === "SB")
@@ -51,8 +52,9 @@ class GenerateRSAKeySetSuite extends FunSuite {
   }
 
   def checkKey(publicKey: Array[Byte], privateKey: Array[Byte]) = {
+    val messageHeader = "    "
     val des = encryptKeyUnderRsa(publicKey, HexConverter.fromHex("7AF4D50EE6587A767AF4D50EE6587A76").toArray)
-    val desImportReq = ImportDesKeyRequest(des, privateKey, 'T')
+    val desImportReq = ImportDesKeyRequest(messageHeader, des, privateKey, 2, 'T')
     val importDesKeyResponse = ImportDesKeyResponse.createResponse(desImportReq).asInstanceOf[ImportDesKeyResponse]
     assert(importDesKeyResponse.desKey === HexConverter.fromHex("0157015564C146EB90920C60CAB2E8F6").toArray)
     assert(importDesKeyResponse.keyCheckValue === HexConverter.fromHex("FD7EC34F674D").toArray)

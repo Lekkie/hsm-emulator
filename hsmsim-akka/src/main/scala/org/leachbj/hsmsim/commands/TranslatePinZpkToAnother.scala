@@ -27,15 +27,15 @@ import org.leachbj.hsmsim.util.HexConverter
 
 import akka.util.ByteString
 
-case class TranslatePinZpkToAnotherRequest(sourceZpk: Array[Byte], destZpk: Array[Byte], maxPinLength: Int, sourcePinBlock: Array[Byte], sourcePinBlockFormat: String, destinationPinBlockFormat: String, accountNumber: String) extends HsmRequest
-case class TranslatePinZpkToAnotherResponse(errorCode: String, pinLength: Int, pinBlock: Array[Byte], pinBlockFormat: String) extends HsmResponse {
+case class TranslatePinZpkToAnotherRequest(messageHeader:String, sourceZpk: Array[Byte], destZpk: Array[Byte], maxPinLength: Int, sourcePinBlock: Array[Byte], sourcePinBlockFormat: String, destinationPinBlockFormat: String, accountNumber: String) extends HsmRequest
+case class TranslatePinZpkToAnotherResponse(messageHeader:String, errorCode: String, pinLength: Int, pinBlock: Array[Byte], pinBlockFormat: String) extends HsmResponse {
   val responseCode = "CD"
 }
 
 object TranslatePinZpkToAnotherResponse {
   def createResponse(req: TranslatePinZpkToAnotherRequest): HsmResponse = {
-    if (req.sourcePinBlockFormat != "05") return ErrorResponse("CD", "23")
-    if (req.destinationPinBlockFormat != "01") return ErrorResponse("CD", "23")
+    if (req.sourcePinBlockFormat != "05") return ErrorResponse(req.messageHeader, "CD", "23")
+    if (req.destinationPinBlockFormat != "01") return ErrorResponse(req.messageHeader, "CD", "23")
 
     def decrypt(pin: Array[Byte]) = {
       val key = LMK.lmkVariant("06-07", 0)
@@ -84,6 +84,6 @@ object TranslatePinZpkToAnotherResponse {
     val oldPinBlock = decrypt(req.sourcePinBlock)
     val (pinLength, newPinBlock) = convertPinBlock(oldPinBlock, req.accountNumber)
     val encryptedNewPinBlock = encrypt(newPinBlock)
-    TranslatePinZpkToAnotherResponse("00", pinLength, encryptedNewPinBlock, req.destinationPinBlockFormat)
+    TranslatePinZpkToAnotherResponse(req.messageHeader, "00", pinLength, encryptedNewPinBlock, req.destinationPinBlockFormat)
   }
 }

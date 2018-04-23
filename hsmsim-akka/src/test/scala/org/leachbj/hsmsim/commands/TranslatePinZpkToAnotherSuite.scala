@@ -30,6 +30,8 @@ import org.scalatest.junit.JUnitRunner
 @RunWith(classOf[JUnitRunner])
 class TranslatePinZpkToAnotherSuite extends FunSuite {
   test("translate source format 05 to destination format 01") {
+
+    val messageHeader = "    "
     val sourceZpk = HexConverter.fromHex("971803BA969012152827CC97A98D18D50BE6559CDFF6F7E1").toArray
     val destZpk = HexConverter.fromHex("247078713614BE11F819054C5FFB08FF").toArray;
     val maxPinLength = 6
@@ -38,7 +40,7 @@ class TranslatePinZpkToAnotherSuite extends FunSuite {
     val sourcePinBlockFormat = "05"
     val destinationPinBlockFormat = "01"
     val accountNumber = "000001000376"
-    val req = TranslatePinZpkToAnotherRequest(sourceZpk, destZpk, maxPinLength, sourcePinBlock, sourcePinBlockFormat, destinationPinBlockFormat, accountNumber)
+    val req = TranslatePinZpkToAnotherRequest(messageHeader, sourceZpk, destZpk, maxPinLength, sourcePinBlock, sourcePinBlockFormat, destinationPinBlockFormat, accountNumber)
     val res = TranslatePinZpkToAnotherResponse.createResponse(req)
     assert(res.errorCode === "00")
     assert(res.responseCode === "CD")
